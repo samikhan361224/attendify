@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendify - Student Attendance System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif']
+                    },
+                    colors: {
+                        primary: '#4F46E5',
+                        secondary: '#10B981',
+                        darkBg: '#0F172A',
+                        darkCard: '#1E293B'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .dark .glass {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .toast {
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        
+        .hidden-view {
+            display: none !important;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-gray-800 dark:bg-darkBg dark:text-gray-100 transition-colors duration-300 min-h-screen">
+
+    <div id="toastContainer" class="fixed top-5 right-5 z-50 flex flex-col gap-2"></div>
+
+    <div id="authView" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-indigo-500 to-purple-600 dark:from-gray-800 dark:to-gray-900">
+        <div class="glass rounded-2xl p-8 max-w-md w-full shadow-2xl relative overflow-hidden">
+            <!-- Theme Toggle -->
+            <button onclick="toggleTheme()" class="absolute top-4 right-4 text-white hover:text-gray-200">
+                <i class="fas fa-moon text-xl" id="authThemeIcon"></i>
+            </button>
+
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-white text-primary rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg text-3xl">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <h2 class="text-3xl font-bold text-white">Attendify</h2>
+                <p class="text-indigo-100 mt-2" id="authSubtitle">Select your role to continue</p>
+            </div>
+
+            <!-- Role Selection -->
+            <div id="roleSelection" class="space-y-4">
+                <button onclick="selectRole('teacher')" class="w-full py-4 px-6 bg-white/20 hover:bg-white/30 text-white rounded-xl border border-white/30 flex items-center justify-between transition group">
+                    <div class="flex items-center gap-4">
+                        <i class="fas fa-chalkboard-teacher text-2xl"></i>
+                        <div class="text-left">
+                            <h3 class="font-bold text-lg">Teacher</h3>
+                            <p class="text-sm text-indigo-100">Manage courses & attendance</p>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-right opacity-0 group-hover:opacity-100 transition"></i>
+                </button>
+                <button onclick="selectRole('student')" class="w-full py-4 px-6 bg-white/20 hover:bg-white/30 text-white rounded-xl border border-white/30 flex items-center justify-between transition group">
+                    <div class="flex items-center gap-4">
+                        <i class="fas fa-user-graduate text-2xl"></i>
+                        <div class="text-left">
+                            <h3 class="font-bold text-lg">Student</h3>
+                            <p class="text-sm text-indigo-100">Join courses & mark attendance</p>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-right opacity-0 group-hover:opacity-100 transition"></i>
+                </button>
+            </div>
+
+            <!-- Login/Register Form -->
+            <form id="authForm" class="hidden-view space-y-4" onsubmit="handleAuth(event)">
+                <div class="flex justify-between items-center mb-4">
+                    <button type="button" onclick="goBackToRoles()" class="text-white hover:text-gray-200 text-sm">
+                        <i class="fas fa-arrow-left mr-1"></i> Back
+                    </button>
+                    <span id="selectedRoleBadge" class="bg-white/20 text-white px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider"></span>
+                </div>
+
+                <div id="registerFields" class="hidden-view space-y-4">
+                    <div>
+                        <label class="block text-white text-sm mb-1">Full Name</label>
+                        <input type="text" id="name" class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-white/50">
+                    </div>
+                    <div id="studentSpecificFields" class="hidden-view space-y-4">
+                        <div>
+                            <label class="block text-white text-sm mb-1">Student ID</label>
+                            <input type="text" id="studentId" class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-white/50">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-white text-sm mb-1">Email</label>
+                    <input type="email" id="email" required class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-white/50">
+                </div>
+                <div>
+                    <label class="block text-white text-sm mb-1">Password</label>
+                    <input type="password" id="password" required class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-white/50">
+                </div>
+
+                <button type="submit" class="w-full bg-white text-primary font-bold py-3 rounded-lg hover:bg-gray-100 transition shadow-lg mt-6" id="submitBtn">
+                    Login
+                </button>
+
+                <p class="text-center text-white text-sm mt-4">
+                    <span id="authToggleText">Don't have an account?</span>
+                    <a href="#" onclick="toggleAuthMode()" class="font-bold hover:underline" id="authToggleLink">Register here</a>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <div id="appView" class="hidden-view flex h-screen overflow-hidden">
+
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white dark:bg-darkCard shadow-lg flex flex-col transition-colors z-10 border-r border-gray-200 dark:border-gray-700 hidden sm:flex">
+            <div class="p-6 flex items-center gap-3">
+                <div class="w-10 h-10 bg-primary text-white rounded-lg flex items-center justify-center text-xl">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-800 dark:text-white">Attendify</h1>
+            </div>
+
+            <div class="px-6 pb-4">
+                <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-2">Logged in as</p>
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-indigo-100 text-primary flex items-center justify-center font-bold" id="userInitial">A</div>
+                    <div>
+                        <p class="font-bold text-sm" id="userNameDisplay">User Name</p>
+                        <p class="text-xs text-gray-500 capitalize" id="userRoleDisplay">Role</p>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="flex-1 px-4 space-y-2 overflow-y-auto mt-4" id="sidebarNav">
+                <!-- Navigation injected via JS based on role -->
+            </nav>
+
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                <button onclick="toggleTheme()" class="w-full flex items-center gap-3 px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition">
+                    <i class="fas fa-moon w-5" id="appThemeIcon"></i> Toggle Theme
+                </button>
+                <button onclick="logout()" class="w-full flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition">
+                    <i class="fas fa-sign-out-alt w-5"></i> Logout
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 flex flex-col h-screen overflow-y-auto relative bg-gray-50 dark:bg-darkBg">
+            <!-- Mobile Header -->
+            <header class="sm:hidden bg-white dark:bg-darkCard shadow p-4 flex justify-between items-center z-10 sticky top-0">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-graduation-cap text-primary text-xl"></i>
+                    <h1 class="font-bold text-lg">Attendify</h1>
+                </div>
+                <button onclick="logout()" class="text-gray-600 dark:text-gray-300"><i class="fas fa-sign-out-alt"></i></button>
+            </header>
+
+            <div class="p-6 md:p-8" id="mainContent">
+                <!-- Dynamic Content goes here -->
+            </div>
+        </main>
+    </div>
+
+    <div id="modalContainer" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 hidden-view flex items-center justify-center p-4">
+        <!-- Create Course Modal -->
+        <div id="createCourseModal" class="bg-white dark:bg-darkCard w-full max-w-md rounded-2xl shadow-xl overflow-hidden hidden-view transform transition-all">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <h3 class="text-xl font-bold">Create New Course</h3>
+                <button onclick="closeModal('createCourseModal')" class="text-gray-500 hover:text-red-500"><i class="fas fa-times"></i></button>
+            </div>
+            <form onsubmit="handleCreateCourse(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Course Name</label>
+                    <input type="text" id="ccName" required class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-primary outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Course Code</label>
+                    <input type="text" id="ccCode" required placeholder="e.g. CSE101" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-primary outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Description</label>
+                    <textarea id="ccDesc" rows="3" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-primary outline-none"></textarea>
+                </div>
+                <button type="submit" class="w-full bg-primary text-white py-2 rounded-lg hover:bg-indigo-700 transition">Create Course</button>
+            </form>
+        </div>
+
+        <!-- Join Course Modal -->
+        <div id="joinCourseModal" class="bg-white dark:bg-darkCard w-full max-w-md rounded-2xl shadow-xl overflow-hidden hidden-view">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <h3 class="text-xl font-bold">Join a Course</h3>
+                <button onclick="closeModal('joinCourseModal')" class="text-gray-500 hover:text-red-500"><i class="fas fa-times"></i></button>
+            </div>
+            <form onsubmit="handleJoinCourse(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Enter 6-8 Character Join Code</label>
+                    <input type="text" id="joinCodeInput" required class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-primary outline-none uppercase font-mono text-center text-2xl tracking-widest"
+                        maxlength="8">
+                </div>
+                <button type="submit" class="w-full bg-primary text-white py-2 rounded-lg hover:bg-indigo-700 transition">Join Now</button>
+            </form>
+        </div>
+
+        <!-- Create Session Modal -->
+        <div id="createSessionModal" class="bg-white dark:bg-darkCard w-full max-w-md rounded-2xl shadow-xl overflow-hidden hidden-view">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <h3 class="text-xl font-bold">Open Attendance Session</h3>
+                <button onclick="closeModal('createSessionModal')" class="text-gray-500 hover:text-red-500"><i class="fas fa-times"></i></button>
+            </div>
+            <form onsubmit="handleCreateSession(event)" class="p-6 space-y-4">
+                <input type="hidden" id="csCourseId">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Date</label>
+                    <input type="date" id="csDate" required class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 outline-none">
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium mb-1">Start Time</label>
+                        <input type="time" id="csStart" required class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 outline-none">
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium mb-1">End Time</label>
+                        <input type="time" id="csEnd" required class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 outline-none">
+                    </div>
+                </div>
+
+                <!-- IP Restriction Settings -->
+                <div class="pt-3 border-t border-gray-200 dark:border-gray-700 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <label class="font-medium text-sm flex items-center gap-2">
+                                <i class="fas fa-network-wired text-primary"></i> Enforce IP Matching
+                            </label>
+                            <p class="text-xs text-gray-500">Lock session to current Wi-Fi/IP address</p>
+                        </div>
+                        <input type="checkbox" id="csEnforceIp" onchange="toggleIpField(this.checked)" class="w-4 h-4 text-primary accent-primary rounded focus:ring-primary">
+                    </div>
+
+                    <div id="ipDetailsContainer" class="hidden-view space-y-2 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-gray-500">Host IP Address:</span>
+                            <button type="button" onclick="detectHostIP()" class="text-primary font-semibold hover:underline flex items-center gap-1">
+                                <i class="fas fa-sync-alt text-xs"></i> Auto Detect
+                            </button>
+                        </div>
+                        <input type="text" id="csAllowedIp" placeholder="Detecting IP..." class="w-full px-3 py-1.5 font-mono text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 outline-none">
+                        <p class="text-[11px] text-amber-600 dark:text-amber-400">Students must match this IP to mark attendance.</p>
+                    </div>
+                </div>
+
+                <button type="submit" id="csSubmitBtn" class="w-full bg-secondary text-white py-2 rounded-lg hover:bg-emerald-600 transition flex items-center justify-center gap-2">
+                    <span>Start Session</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Helper: Fetch Client Internet Protocol (IP) Address
+        async function fetchClientIP() {
+            try {
+                const response = await fetch('https://api.ipify.org?format=json');
+                const data = await response.json();
+                return data.ip || '127.0.0.1';
+            } catch (error) {
+                console.warn('Unable to fetch IP address from API, defaulting to local IP:', error);
+                return '127.0.0.1';
+            }
+        }
+
+        // Helper for Modal IP Toggle
+        function toggleIpField(enabled) {
+            const container = document.getElementById('ipDetailsContainer');
+            if (enabled) {
+                container.classList.remove('hidden-view');
+                detectHostIP();
+            } else {
+                container.classList.add('hidden-view');
+            }
+        }
+
+        async function detectHostIP() {
+            const ipInput = document.getElementById('csAllowedIp');
+            ipInput.placeholder = 'Fetching IP...';
+            const ip = await fetchClientIP();
+            ipInput.value = ip;
+        }
+
+        // Database Setup using LocalStorage
+        const DB = {
+            init() {
+                if (!localStorage.getItem('users')) localStorage.setItem('users', JSON.stringify([]));
+                if (!localStorage.getItem('courses')) localStorage.setItem('courses', JSON.stringify([]));
+                if (!localStorage.getItem('enrollments')) localStorage.setItem('enrollments', JSON.stringify([]));
+                if (!localStorage.getItem('sessions')) localStorage.setItem('sessions', JSON.stringify([]));
+                if (!localStorage.getItem('attendance')) localStorage.setItem('attendance', JSON.stringify([]));
+            },
+            get(table) {
+                return JSON.parse(localStorage.getItem(table)) || [];
+            },
+            save(table, data) {
+                localStorage.setItem(table, JSON.stringify(data));
+            },
+            insert(table, row) {
+                const data = this.get(table);
+                row.id = Date.now().toString(36) + Math.random().toString(36).substr(2); // generate unique ID
+                data.push(row);
+                this.save(table, data);
+                return row;
+            },
+            update(table, id, updates) {
+                const data = this.get(table);
+                const index = data.findIndex(r => r.id === id);
+                if (index > -1) {
+                    data[index] = {...data[index],
+                        ...updates
+                    };
+                    this.save(table, data);
+                }
+            }
+        };
+        DB.init();
+
+        let currentUser = null;
+        let currentRoleSelection = null;
+        let isLoginMode = true;
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const color = type === 'success' ? 'bg-secondary' : 'bg-red-500';
+            const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+
+            toast.className = `${color} text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 toast transform translate-x-full opacity-0 z-50`;
+            toast.innerHTML = `<i class="fas ${icon}"></i> <span>${message}</span>`;
+
+            container.appendChild(toast);
+
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full', 'opacity-0');
+            }, 10);
+
+            // Remove after 3s
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.classList.toggle('dark');
+            const icon1 = document.getElementById('authThemeIcon');
+            const icon2 = document.getElementById('appThemeIcon');
+
+            const newIcon = isDark ? 'fa-sun' : 'fa-moon';
+            if (icon1) {
+                icon1.classList.remove('fa-moon', 'fa-sun');
+                icon1.classList.add(newIcon);
+            }
+            if (icon2) {
+                icon2.classList.remove('fa-moon', 'fa-sun');
+                icon2.classList.add(newIcon);
+            }
+        }
+
+        function copyToClipboard(text) {
+            const el = document.createElement('textarea');
+            el.value = text;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            showToast('Join code copied!');
+        }
+
+        function openModal(id) {
+            document.getElementById('modalContainer').classList.remove('hidden-view');
+            document.querySelectorAll('#modalContainer > div').forEach(d => d.classList.add('hidden-view'));
+            document.getElementById(id).classList.remove('hidden-view');
+
+            // Reset forms inside modal
+            const form = document.querySelector(`#${id} form`);
+            if (form) form.reset();
+            if (id === 'createSessionModal') {
+                toggleIpField(false);
+            }
+        }
+
+        function closeModal(id) {
+            document.getElementById('modalContainer').classList.add('hidden-view');
+            if (id) document.getElementById(id).classList.add('hidden-view');
+        }
+
+        function selectRole(role) {
+            currentRoleSelection = role;
+            document.getElementById('roleSelection').classList.add('hidden-view');
+            document.getElementById('authForm').classList.remove('hidden-view');
+            document.getElementById('authSubtitle').innerText = `Sign in as ${role}`;
+            document.getElementById('selectedRoleBadge').innerText = role;
+
+            if (role === 'student' && !isLoginMode) {
+                document.getElementById('studentSpecificFields').classList.remove('hidden-view');
+            } else {
+                document.getElementById('studentSpecificFields').classList.add('hidden-view');
+            }
+        }
+
+        function goBackToRoles() {
+            document.getElementById('authForm').classList.add('hidden-view');
+            document.getElementById('roleSelection').classList.remove('hidden-view');
+            document.getElementById('authSubtitle').innerText = 'Select your role to continue';
+            currentRoleSelection = null;
+        }
+
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            const submitBtn = document.getElementById('submitBtn');
+            const toggleText = document.getElementById('authToggleText');
+            const toggleLink = document.getElementById('authToggleLink');
+            const registerFields = document.getElementById('registerFields');
+
+            if (isLoginMode) {
+                submitBtn.innerText = 'Login';
+                toggleText.innerText = "Don't have an account?";
+                toggleLink.innerText = "Register here";
+                registerFields.classList.add('hidden-view');
+            } else {
+                submitBtn.innerText = 'Register';
+                toggleText.innerText = "Already have an account?";
+                toggleLink.innerText = "Login here";
+                registerFields.classList.remove('hidden-view');
+                if (currentRoleSelection === 'student') {
+                    document.getElementById('studentSpecificFields').classList.remove('hidden-view');
+                }
+            }
+        }
+
+        function handleAuth(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+
+            // Basic Validation
+            if (!email || !password) {
+                return showToast('Please fill in all required fields.', 'error');
+            }
+            if (password.length < 6) {
+                return showToast('Password must be at least 6 characters long.', 'error');
+            }
+
+            if (isLoginMode) {
+                const users = DB.get('users');
+                const user = users.find(u => u.email === email && u.password === password && u.role === currentRoleSelection);
+
+                if (user) {
+                    currentUser = user;
+                    showToast(`Welcome back, ${user.name}!`);
+                    initApp();
+                } else {
+                    showToast('Invalid credentials or role.', 'error');
+                }
+            } else {
+                const name = document.getElementById('name').value.trim();
+                const studentId = document.getElementById('studentId').value.trim();
+
+                // Registration Validation
+                if (!name) {
+                    return showToast('Full Name is required.', 'error');
+                }
+                if (currentRoleSelection === 'student' && !studentId) {
+                    return showToast('Student ID is required for students.', 'error');
+                }
+
+                const users = DB.get('users');
+                if (users.some(u => u.email === email)) {
+                    showToast('Email already registered.', 'error');
+                    return;
+                }
+
+                const newUser = {
+                    name,
+                    email,
+                    password,
+                    role: currentRoleSelection
+                };
+                if (currentRoleSelection === 'student') newUser.studentId = studentId;
+
+                currentUser = DB.insert('users', newUser);
+                showToast('Registration successful!');
+                initApp();
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('appView').classList.add('hidden-view');
+            document.getElementById('authView').classList.remove('hidden-view');
+            goBackToRoles();
+            document.getElementById('authForm').reset();
+            isLoginMode = true;
+            toggleAuthMode(); // Reset to login view
+            toggleAuthMode(); // Hacky toggle back
+            showToast('Logged out successfully.');
+        }
+
+        function initApp() {
+            document.getElementById('authView').classList.add('hidden-view');
+            document.getElementById('appView').classList.remove('hidden-view');
+
+            document.getElementById('userNameDisplay').innerText = currentUser.name;
+            document.getElementById('userRoleDisplay').innerText = currentUser.role;
+            document.getElementById('userInitial').innerText = currentUser.name.charAt(0).toUpperCase();
+
+            setupSidebar();
+
+            if (currentUser.role === 'teacher') renderTeacherDashboard();
+            else renderStudentDashboard();
+        }
+
+        function setupSidebar() {
+            const nav = document.getElementById('sidebarNav');
+            nav.innerHTML = ''; // clear
+
+            const createLink = (icon, text, action, active = false) => {
+                const a = document.createElement('a');
+                a.href = '#';
+                a.onclick = (e) => {
+                    e.preventDefault();
+                    action();
+                    updateActiveNav(a);
+                };
+                a.className = `flex items-center gap-3 px-4 py-3 rounded-lg transition ${active ? 'bg-indigo-50 text-primary dark:bg-indigo-900/30' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`;
+                a.innerHTML = `<i class="fas ${icon} w-5"></i> font-medium ${text}`;
+                return a;
+            };
+
+            function updateActiveNav(clickedElement) {
+                Array.from(nav.children).forEach(el => {
+                    el.classList.remove('bg-indigo-50', 'text-primary', 'dark:bg-indigo-900/30');
+                    el.classList.add('text-gray-600', 'dark:text-gray-300');
+                });
+                clickedElement.classList.add('bg-indigo-50', 'text-primary', 'dark:bg-indigo-900/30');
+                clickedElement.classList.remove('text-gray-600', 'dark:text-gray-300');
+            }
+
+            if (currentUser.role === 'teacher') {
+                const dashLink = createLink('fa-chart-pie', 'Dashboard', renderTeacherDashboard, true);
+                nav.appendChild(dashLink);
+                nav.appendChild(createLink('fa-book', 'My Courses', renderTeacherCourses));
+                nav.appendChild(createLink('fa-calendar-check', 'Attendance Sessions', renderTeacherSessions));
+            } else {
+                const dashLink = createLink('fa-chart-pie', 'Dashboard', renderStudentDashboard, true);
+                nav.appendChild(dashLink);
+                nav.appendChild(createLink('fa-book-open', 'My Courses', renderStudentCourses));
+                nav.appendChild(createLink('fa-history', 'Attendance History', renderStudentHistory));
+            }
+        }
+
+        function renderTeacherDashboard() {
+            const courses = DB.get('courses').filter(c => c.teacher_id === currentUser.id);
+            const sessions = DB.get('sessions').filter(s => courses.some(c => c.id === s.course_id));
+
+            let totalStudents = 0;
+            const enrollments = DB.get('enrollments');
+            courses.forEach(c => {
+                totalStudents += enrollments.filter(e => e.course_id === c.id).length;
+            });
+
+            const html = `
+                <div class="fade-in">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold">Teacher Dashboard</h2>
+                        <button onclick="openModal('createCourseModal')" class="bg-primary text-white px-4 py-2 rounded-lg shadow hover:bg-indigo-700 transition">
+                            <i class="fas fa-plus mr-2"></i> New Course
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div class="bg-white dark:bg-darkCard p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 bg-indigo-100 text-primary rounded-lg flex items-center justify-center text-xl"><i class="fas fa-book"></i></div>
+                                <div><p class="text-gray-500 text-sm">Total Courses</p><p class="text-2xl font-bold">${courses.length}</p></div>
+                            </div>
+                        </div>
+                        <div class="bg-white dark:bg-darkCard p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 bg-green-100 text-secondary rounded-lg flex items-center justify-center text-xl"><i class="fas fa-users"></i></div>
+                                <div><p class="text-gray-500 text-sm">Total Students</p><p class="text-2xl font-bold">${totalStudents}</p></div>
+                            </div>
+                        </div>
+                        <div class="bg-white dark:bg-darkCard p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-lg flex items-center justify-center text-xl"><i class="fas fa-clipboard-list"></i></div>
+                                <div><p class="text-gray-500 text-sm">Total Sessions</p><p class="text-2xl font-bold">${sessions.length}</p></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 class="text-xl font-bold mb-4">Your Courses</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        ${courses.map(c => `
+                            <div class="bg-white dark:bg-darkCard border border-gray-200 dark:border-gray-700 rounded-xl p-5 shadow-sm hover:shadow-md transition">
+                                <div class="flex justify-between items-start mb-2">
+                                    <h4 class="font-bold text-lg text-primary truncate" title="${c.name}">${c.name}</h4>
+                                    <span class="bg-gray-100 dark:bg-gray-800 text-xs px-2 py-1 rounded">${c.code}</span>
+                                </div>
+                                <p class="text-gray-500 text-sm mb-4 line-clamp-2">${c.description || 'No description'}</p>
+                                <div class="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-lg flex justify-between items-center mb-4 border border-indigo-100 dark:border-indigo-800">
+                                    <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Code: <span class="font-mono text-primary text-lg tracking-widest ml-1">${c.join_code}</span></span>
+                                    <button onclick="copyToClipboard('${c.join_code}')" class="text-gray-400 hover:text-primary"><i class="far fa-copy"></i></button>
+                                </div>
+                                <button onclick="prepSession('${c.id}')" class="w-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-white py-2 rounded-lg text-sm transition">
+                                    <i class="fas fa-play-circle mr-1"></i> Start Attendance
+                                </button>
+                            </div>
+                        `).join('') || '<p class="text-gray-500 col-span-full">No courses created yet. Create one to get started.</p>'}
+                    </div>
+                </div>
+            `;
+            document.getElementById('mainContent').innerHTML = html;
+        }
+
+        function handleCreateCourse(e) {
+            e.preventDefault();
+            const name = document.getElementById('ccName').value;
+            const code = document.getElementById('ccCode').value;
+            const desc = document.getElementById('ccDesc').value;
+            const joinCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+            DB.insert('courses', { teacher_id: currentUser.id, name, code, description: desc, join_code: joinCode });
+            showToast('Course created successfully!');
+            closeModal('createCourseModal');
+            renderTeacherDashboard();
+        }
+
+        function renderTeacherCourses() {
+            renderTeacherDashboard(); 
+        }
+
+        function prepSession(courseId) {
+            document.getElementById('csCourseId').value = courseId;
+            const now = new Date();
+            
+            // Set date, taking local timezone into account properly
+            const localDate = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+            document.getElementById('csDate').value = localDate;
+            
+            // Format time HH:MM
+            const hours = String(now.getHours()).padStart(2, '0');
+            const mins = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('csStart').value = `${hours}:${mins}`;
+            
+            // Default 30 mins later
+            now.setMinutes(now.getMinutes() + 30);
+            const eHours = String(now.getHours()).padStart(2, '0');
+            const eMins = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('csEnd').value = `${eHours}:${eMins}`;
+            
+            openModal('createSessionModal');
+        }
+
+        async function handleCreateSession(e) {
+            e.preventDefault();
+            const courseId = document.getElementById('csCourseId').value;
+            const date = document.getElementById('csDate').value;
+            const start = document.getElementById('csStart').value;
+            const end = document.getElementById('csEnd').value;
+            const enforceIp = document.getElementById('csEnforceIp').checked;
+            const allowedIp = enforceIp ? document.getElementById('csAllowedIp').value.trim() : null;
+
+            if (enforceIp && !allowedIp) {
+                return showToast('Please enter or detect a valid IP address.', 'error');
+            }
+
+            DB.insert('sessions', { 
+                course_id: courseId, 
+                date, 
+                start_time: start, 
+                end_time: end, 
+                status: 'Open',
+                enforce_ip: enforceIp,
+                allowed_ip: allowedIp
+            });
+
+            showToast(enforceIp ? `Session opened with IP restriction (${allowedIp})` : 'Attendance session opened!');
+            closeModal('createSessionModal');
+            renderTeacherSessions();
+        }
+
+        function renderTeacherSessions() {
+            const courses = DB.get('courses').filter(c => c.teacher_id === currentUser.id);
+            const courseIds = courses.map(c => c.id);
+            const sessions = DB.get('sessions').filter(s => courseIds.includes(s.course_id)).reverse();
+            const allAttendance = DB.get('attendance');
+
+            const html = `
+                <div class="fade-in">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold">Attendance Sessions</h2>
+                    </div>
+                    
+                    <div class="bg-white dark:bg-darkCard rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-50 dark:bg-gray-800 text-gray-500 text-sm uppercase">
+                                        <th class="p-4 font-semibold">Date</th>
+                                        <th class="p-4 font-semibold">Course</th>
+                                        <th class="p-4 font-semibold">Time Window</th>
+                                        <th class="p-4 font-semibold">IP Protection</th>
+                                        <th class="p-4 font-semibold">Status</th>
+                                        <th class="p-4 font-semibold">Present</th>
+                                        <th class="p-4 font-semibold">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${sessions.map(s => {
+                                        const c = courses.find(course => course.id === s.course_id);
+                                        const count = allAttendance.filter(a => a.session_id === s.id).length;
+                                        const isOpen = s.status === 'Open';
+                                        return `
+                                        <tr class="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                                            <td class="p-4">${s.date}</td>
+                                            <td class="p-4 font-medium">${c ? c.name : 'Unknown'}</td>
+                                            <td class="p-4 text-sm">${s.start_time} - ${s.end_time}</td>
+                                            <td class="p-4 text-xs font-mono">
+                                                ${s.enforce_ip 
+                                                    ? `<span class="inline-flex items-center gap-1 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 px-2 py-1 rounded">
+                                                        <i class="fas fa-lock text-[10px]"></i> ${s.allowed_ip}
+                                                       </span>` 
+                                                    : `<span class="text-gray-400">Disabled</span>`
+                                                }
+                                            </td>
+                                            <td class="p-4">
+                                                <span class="px-2 py-1 rounded text-xs font-bold ${isOpen ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'}">
+                                                    ${s.status}
+                                                </span>
+                                            </td>
+                                            <td class="p-4">${count} students</td>
+                                            <td class="p-4 flex gap-2">
+                                                ${isOpen ? `<button onclick="closeSession('${s.id}')" class="text-xs bg-red-100 text-red-600 px-3 py-1 rounded hover:bg-red-200">Close</button>` : ''}
+                                                <button onclick="exportCSV('${s.id}')" class="text-xs bg-indigo-100 text-primary px-3 py-1 rounded hover:bg-indigo-200"><i class="fas fa-download"></i> CSV</button>
+                                            </td>
+                                        </tr>
+                                        `;
+                                    }).join('') || '<tr><td colspan="7" class="p-4 text-center text-gray-500">No sessions found.</td></tr>'}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('mainContent').innerHTML = html;
+        }
+
+        function closeSession(id) {
+            DB.update('sessions', id, { status: 'Closed' });
+            showToast('Session closed manually.');
+            renderTeacherSessions();
+        }
+
+        function exportCSV(sessionId) {
+            const session = DB.get('sessions').find(s => s.id === sessionId);
+            if (!session) return showToast('Session not found', 'error');
+
+            const course = DB.get('courses').find(c => c.id === session.course_id);
+            const enrollments = DB.get('enrollments').filter(e => e.course_id === session.course_id);
+            const attendance = DB.get('attendance').filter(a => a.session_id === sessionId);
+            const users = DB.get('users');
+
+            showToast('Generating CSV report with IP logs...');
+
+            // Create CSV Headers
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += `Course: ${course.name} (${course.code})\n`;
+            csvContent += `Date: ${session.date}\n`;
+            csvContent += `IP Restriction: ${session.enforce_ip ? session.allowed_ip : 'None'}\n\n`;
+            csvContent += `Student ID,Name,Status,Time Recorded,Student IP Address\n`;
+
+            // Populate Rows
+            enrollments.forEach(en => {
+                const student = users.find(u => u.id === en.student_id);
+                if(student) {
+                    const record = attendance.find(a => a.student_id === student.id);
+                    const status = record ? "Present" : "Absent";
+                    const time = record ? new Date(record.time).toLocaleTimeString() : "--";
+                    const ip = record ? record.ip_address || "N/A" : "--";
+                    const studentIdDisplay = student.studentId || 'N/A';
+                    
+                    // Escape names to prevent CSV format breaking
+                    const safeName = student.name.replace(/"/g, '""');
+                    
+                    csvContent += `"${studentIdDisplay}","${safeName}","${status}","${time}","${ip}"\n`;
+                }
+            });
+
+            // Trigger Download
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Attendance_${course.code}_${session.date}.csv`);
+            document.body.appendChild(link); // Required for Firefox
+            link.click();
+            document.body.removeChild(link);
+            
+            setTimeout(() => {
+                showToast('Report downloaded successfully!');
+            }, 500);
+        }
+
+        function renderStudentDashboard() {
+            const enrollments = DB.get('enrollments').filter(e => e.student_id === currentUser.id);
+            const myCourseIds = enrollments.map(e => e.course_id);
+            const courses = DB.get('courses').filter(c => myCourseIds.includes(c.id));
+            
+            // Get active sessions for my courses based on local time
+            const now = new Date();
+            const localDate = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+            
+            // Ensure time formats match (HH:MM)
+            const hours = String(now.getHours()).padStart(2, '0');
+            const mins = String(now.getMinutes()).padStart(2, '0');
+            const currTime = `${hours}:${mins}`;
+
+            const activeSessions = DB.get('sessions').filter(s => {
+                const sStart = s.start_time.length === 5 ? s.start_time : s.start_time.substring(0, 5);
+                const sEnd = s.end_time.length === 5 ? s.end_time : s.end_time.substring(0, 5);
+                
+                return myCourseIds.includes(s.course_id) && 
+                       s.status === 'Open' &&
+                       s.date === localDate &&
+                       sStart <= currTime &&
+                       sEnd >= currTime;
+            });
+
+            const html = `
+                <div class="fade-in">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold">Student Dashboard</h2>
+                        <button onclick="openModal('joinCourseModal')" class="bg-primary text-white px-4 py-2 rounded-lg shadow hover:bg-indigo-700 transition">
+                            <i class="fas fa-plus mr-2"></i> Join Course
+                        </button>
+                    </div>
+
+                    ${activeSessions.length > 0 ? `
+                        <div class="mb-8">
+                            <h3 class="text-lg font-bold text-red-500 mb-4 flex items-center gap-2">
+                                <i class="fas fa-circle text-xs animate-pulse"></i> Active Attendance Sessions
+                            </h3>
+                            <div class="space-y-3">
+                                ${activeSessions.map(s => {
+                                    const c = courses.find(course => course.id === s.course_id);
+                                    const marked = DB.get('attendance').some(a => a.session_id === s.id && a.student_id === currentUser.id);
+                                    return `
+                                    <div class="bg-white dark:bg-darkCard border-l-4 border-secondary p-4 rounded-r-xl shadow-sm flex justify-between items-center">
+                                        <div>
+                                            <div class="flex items-center gap-2">
+                                                <h4 class="font-bold">${c ? c.name : 'Unknown'}</h4>
+                                                ${s.enforce_ip ? `<span class="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full"><i class="fas fa-wifi text-[9px] mr-1"></i> Class Wi-Fi Required</span>` : ''}
+                                            </div>
+                                            <p class="text-sm text-gray-500">Closes at ${s.end_time}</p>
+                                        </div>
+                                        ${marked 
+                                            ? `<span class="bg-green-100 text-green-700 px-3 py-1 rounded text-sm font-bold"><i class="fas fa-check mr-1"></i> Marked</span>` 
+                                            : `<button id="btnMark_${s.id}" onclick="markAttendance('${s.id}')" class="bg-secondary text-white px-4 py-2 rounded shadow hover:bg-emerald-600 transition flex items-center gap-2">
+                                                <i class="fas fa-check-circle"></i> Give Attendance
+                                               </button>`
+                                        }
+                                    </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <h3 class="text-xl font-bold mb-4">My Courses</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        ${courses.map(c => `
+                            <div class="bg-white dark:bg-darkCard border border-gray-200 dark:border-gray-700 rounded-xl p-5 shadow-sm hover:shadow-md transition">
+                                <div class="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 text-primary rounded flex items-center justify-center mb-3">
+                                    <i class="fas fa-book"></i>
+                                </div>
+                                <h4 class="font-bold text-lg truncate">${c.name}</h4>
+                                <p class="text-sm text-gray-500 mb-2">${c.code}</p>
+                                <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 text-sm">
+                                    ${calculateAttendanceStats(c.id, currentUser.id)}
+                                </div>
+                            </div>
+                        `).join('') || '<p class="text-gray-500">You haven\'t joined any courses yet.</p>'}
+                    </div>
+                </div>
+            `;
+            document.getElementById('mainContent').innerHTML = html;
+        }
+
+        function calculateAttendanceStats(courseId, studentId) {
+            const courseSessions = DB.get('sessions').filter(s => s.course_id === courseId && s.status === 'Closed' || s.date < new Date().toISOString().split('T')[0]);
+            const total = courseSessions.length;
+            if (total === 0) return `<span class="text-gray-400">No sessions yet</span>`;
+            
+            const attended = DB.get('attendance').filter(a => a.student_id === studentId && courseSessions.some(s => s.id === a.session_id)).length;
+            const pct = Math.round((attended / total) * 100);
+            
+            let color = 'text-green-500';
+            if(pct < 75) color = 'text-yellow-500';
+            if(pct < 50) color = 'text-red-500';
+
+            return `Attendance: <span class="font-bold ${color}">${pct}%</span> (${attended}/${total})`;
+        }
+
+        function handleJoinCourse(e) {
+            e.preventDefault();
+            const code = document.getElementById('joinCodeInput').value.trim().toUpperCase();
+            const course = DB.get('courses').find(c => c.join_code === code);
+
+            if(!course) {
+                showToast('Invalid Join Code', 'error');
+                return;
+            }
+
+            const enrollments = DB.get('enrollments');
+            if(enrollments.some(en => en.student_id === currentUser.id && en.course_id === course.id)) {
+                showToast('You are already enrolled in this course.', 'error');
+                return;
+            }
+
+            DB.insert('enrollments', { student_id: currentUser.id, course_id: course.id });
+            showToast(`Successfully joined ${course.name}!`);
+            closeModal('joinCourseModal');
+            renderStudentDashboard();
+        }
+
+        function renderStudentCourses() {
+            renderStudentDashboard();
+        }
+
+        async function markAttendance(sessionId) {
+            const btn = document.getElementById(`btnMark_${sessionId}`);
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Checking IP...`;
+            }
+
+            const session = DB.get('sessions').find(s => s.id === sessionId);
+            if (!session) {
+                showToast('Session not found.', 'error');
+                if (btn) btn.disabled = false;
+                return;
+            }
+
+            const attendance = DB.get('attendance');
+            if(attendance.some(a => a.session_id === sessionId && a.student_id === currentUser.id)) {
+                showToast('Attendance already marked!', 'error');
+                if (btn) btn.disabled = false;
+                return;
+            }
+
+            // Fetch Student's current Internet Protocol (IP) address
+            const studentIp = await fetchClientIP();
+
+            // Internet Protocol (IP) Matching Verification
+            if (session.enforce_ip && session.allowed_ip) {
+                if (studentIp !== session.allowed_ip) {
+                    showToast(`IP Mismatch! Your IP (${studentIp}) does not match classroom network (${session.allowed_ip}).`, 'error');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = `<i class="fas fa-check-circle"></i> Give Attendance`;
+                    }
+                    return;
+                }
+            }
+
+            // Record attendance with IP address
+            DB.insert('attendance', {
+                session_id: sessionId,
+                student_id: currentUser.id,
+                time: new Date().toISOString(),
+                status: 'Present',
+                ip_address: studentIp
+            });
+
+            showToast(`Attendance marked successfully! (IP: ${studentIp})`);
+            renderStudentDashboard();
+        }
+
+        function renderStudentHistory() {
+            const enrollments = DB.get('enrollments').filter(e => e.student_id === currentUser.id);
+            const myCourseIds = enrollments.map(e => e.course_id);
+            
+            const sessions = DB.get('sessions').filter(s => myCourseIds.includes(s.course_id)).reverse();
+            const allCourses = DB.get('courses');
+            const myAttendance = DB.get('attendance').filter(a => a.student_id === currentUser.id);
+
+            const html = `
+                <div class="fade-in">
+                    <h2 class="text-2xl font-bold mb-6">Attendance History</h2>
+                    <div class="bg-white dark:bg-darkCard rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-50 dark:bg-gray-800 text-gray-500 text-sm uppercase">
+                                    <th class="p-4 font-semibold">Date</th>
+                                    <th class="p-4 font-semibold">Course</th>
+                                    <th class="p-4 font-semibold">Status</th>
+                                    <th class="p-4 font-semibold">Recorded IP</th>
+                                    <th class="p-4 font-semibold">Time Recorded</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${sessions.map(s => {
+                                    const c = allCourses.find(course => course.id === s.course_id);
+                                    const record = myAttendance.find(a => a.session_id === s.id);
+                                    
+                                    if(s.status === 'Open' && !record && s.date === new Date().toISOString().split('T')[0]) return '';
+
+                                    return `
+                                    <tr class="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                                        <td class="p-4">${s.date}</td>
+                                        <td class="p-4 font-medium">${c ? c.name : 'Unknown'}</td>
+                                        <td class="p-4">
+                                            ${record 
+                                                ? `<span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">Present</span>` 
+                                                : `<span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">Absent</span>`
+                                            }
+                                        </td>
+                                        <td class="p-4 text-xs font-mono text-gray-500">
+                                            ${record ? (record.ip_address || 'N/A') : '--'}
+                                        </td>
+                                        <td class="p-4 text-sm text-gray-500">
+                                            ${record ? new Date(record.time).toLocaleTimeString() : '--'}
+                                        </td>
+                                    </tr>
+                                    `;
+                                }).join('') || '<tr><td colspan="5" class="p-4 text-center text-gray-500">No attendance history found.</td></tr>'}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+            document.getElementById('mainContent').innerHTML = html;
+        }
+    </script>
+</body>
+
+</html>
