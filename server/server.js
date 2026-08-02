@@ -14,7 +14,7 @@ const JWT_SECRET = 'your_super_secret_key_change_in_production';
 // Database Connection Pool
 const pool = mysql.createPool({
     host: 'https://unstuffed-kelp-stencil.ngrok-free.dev',
-    port: '4040',
+    port: '5000',
     user: 'root',
     password: '',
     database: 'attendance_db'
