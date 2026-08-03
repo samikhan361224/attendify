@@ -330,38 +330,7 @@
         }
 
         // Database Setup using LocalStorage
-        const DB = {
-            init() {
-                if (!localStorage.getItem('users')) localStorage.setItem('users', JSON.stringify([]));
-                if (!localStorage.getItem('courses')) localStorage.setItem('courses', JSON.stringify([]));
-                if (!localStorage.getItem('enrollments')) localStorage.setItem('enrollments', JSON.stringify([]));
-                if (!localStorage.getItem('sessions')) localStorage.setItem('sessions', JSON.stringify([]));
-                if (!localStorage.getItem('attendance')) localStorage.setItem('attendance', JSON.stringify([]));
-            },
-            get(table) {
-                return JSON.parse(localStorage.getItem(table)) || [];
-            },
-            save(table, data) {
-                localStorage.setItem(table, JSON.stringify(data));
-            },
-            insert(table, row) {
-                const data = this.get(table);
-                row.id = Date.now().toString(36) + Math.random().toString(36).substr(2); // generate unique ID
-                data.push(row);
-                this.save(table, data);
-                return row;
-            },
-            update(table, id, updates) {
-                const data = this.get(table);
-                const index = data.findIndex(r => r.id === id);
-                if (index > -1) {
-                    data[index] = {...data[index],
-                        ...updates
-                    };
-                    this.save(table, data);
-                }
-            }
-        };
+
         DB.init();
 
         let currentUser = null;
@@ -480,7 +449,7 @@
             }
         }
 
-        function handleAuth(e) {
+        async function handleAuth(e) {
             e.preventDefault();
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
@@ -494,9 +463,30 @@
             }
 
             if (isLoginMode) {
-                const users = DB.get('users');
-                const user = users.find(u => u.email === email && u.password === password && u.role === currentRoleSelection);
+                const response = await fetch("http://localhost:5000/api/login", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        email,
+                        password,
+                        role: currentRoleSelection
+                    })
+                });
 
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showToast(data.error, "error");
+                    return;
+                }
+
+                localStorage.setItem("token", data.token);
+                currentUser = data.user;
+
+                showToast("Welcome back!");
+                initApp();
                 if (user) {
                     currentUser = user;
                     showToast(`Welcome back, ${user.name}!`);
@@ -530,7 +520,32 @@
                 };
                 if (currentRoleSelection === 'student') newUser.studentId = studentId;
 
-                currentUser = DB.insert('users', newUser);
+                const response = await fetch("http://localhost:5000/api/register", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        name,
+                        email,
+                        password,
+                        role: currentRoleSelection,
+                        studentId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showToast(data.error, "error");
+                    return;
+                }
+
+                localStorage.setItem("token", data.token);
+                currentUser = data.user;
+
+                showToast("Registration Successful");
+                initApp();
                 showToast('Registration successful!');
                 initApp();
             }
@@ -575,7 +590,7 @@
                     updateActiveNav(a);
                 };
                 a.className = `flex items-center gap-3 px-4 py-3 rounded-lg transition ${active ? 'bg-indigo-50 text-primary dark:bg-indigo-900/30' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`;
-                a.innerHTML = `<i class="fas ${icon} w-5"></i> font-medium ${text}`;
+                a.innerHTML = `<i class="fas ${icon} w-5"></i> <span class="font-medium">${text}</span>`;
                 return a;
             };
 
@@ -665,14 +680,25 @@
             document.getElementById('mainContent').innerHTML = html;
         }
 
-        function handleCreateCourse(e) {
+        async function handleCreateCourse(e) {
             e.preventDefault();
             const name = document.getElementById('ccName').value;
             const code = document.getElementById('ccCode').value;
             const desc = document.getElementById('ccDesc').value;
             const joinCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-            DB.insert('courses', { teacher_id: currentUser.id, name, code, description: desc, join_code: joinCode });
+           await fetch("http://localhost:5000/api/courses", {
+    method: "POST",
+    headers: {
+        "Authorization": "Bearer " + localStorage.getItem("token"),
+        "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+        name,
+        code,
+        description: desc
+    })
+});
             showToast('Course created successfully!');
             closeModal('createCourseModal');
             renderTeacherDashboard();
@@ -953,7 +979,7 @@
             return `Attendance: <span class="font-bold ${color}">${pct}%</span> (${attended}/${total})`;
         }
 
-        function handleJoinCourse(e) {
+   async     function handleJoinCourse(e) {
             e.preventDefault();
             const code = document.getElementById('joinCodeInput').value.trim().toUpperCase();
             const course = DB.get('courses').find(c => c.join_code === code);
@@ -969,7 +995,16 @@
                 return;
             }
 
-            DB.insert('enrollments', { student_id: currentUser.id, course_id: course.id });
+          await fetch("http://localhost:5000/api/join-course", {
+    method: "POST",
+    headers: {
+        "Authorization": "Bearer " + localStorage.getItem("token"),
+        "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+        joinCode: code
+    })
+});
             showToast(`Successfully joined ${course.name}!`);
             closeModal('joinCourseModal');
             renderStudentDashboard();
