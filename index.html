@@ -463,7 +463,7 @@
             }
 
             if (isLoginMode) {
-                const response = await fetch("http://localhost:5000/api/login", {
+                const response = await fetch("https://attendify-3d6m.onrender.com:5000/api/login", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json"
@@ -520,7 +520,7 @@
                 };
                 if (currentRoleSelection === 'student') newUser.studentId = studentId;
 
-                const response = await fetch("http://localhost:5000/api/register", {
+                const response = await fetch("https://attendify-3d6m.onrender.com:5000/api/register", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json"
@@ -687,7 +687,7 @@
             const desc = document.getElementById('ccDesc').value;
             const joinCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-           await fetch("http://localhost:5000/api/courses", {
+           await fetch("https://attendify-3d6m.onrender.com:5000/api/courses", {
     method: "POST",
     headers: {
         "Authorization": "Bearer " + localStorage.getItem("token"),
@@ -995,7 +995,7 @@
                 return;
             }
 
-          await fetch("http://localhost:5000/api/join-course", {
+          await fetch("https://attendify-3d6m.onrender.com:5000/api/join-course", {
     method: "POST",
     headers: {
         "Authorization": "Bearer " + localStorage.getItem("token"),
